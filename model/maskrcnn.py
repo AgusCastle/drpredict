@@ -4,7 +4,7 @@ from torchvision.models.detection.rpn import AnchorGenerator
 import torch
 
 class MaskRCNN(MaskRCNN_):
-    def __init__(self, num_class=10, snap=None, trainable_layers=5):
+    def __init__(self, num_class=5, snap=None, trainable_layers=5):
         backbone = resnet_fpn_backbone('resnet101', True, trainable_layers=trainable_layers)
         anchor_sizes = ((8, 16, 32, 64, 128), )
         aspect_ratios = [(0.5, 1.0, 2.0) for _ in range(len(anchor_sizes))]

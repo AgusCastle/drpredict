@@ -185,6 +185,7 @@ class DeepDRModule(nn.Module):
             label = label.to(self.device)
             optimizer.zero_grad()
             pred = self.forward_classification(image, with_mask_rcnn=with_mask_rcnn)
+            print(torch.argmax(pred, 1))
             loss = F.cross_entropy(pred, label)
             loss.backward()
             optimizer.step()
