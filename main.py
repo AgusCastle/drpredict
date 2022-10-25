@@ -1,9 +1,11 @@
 import argparse
+from unicodedata import name
 from data_loader import LesionSegMask, ClassificationTest
 
 from torch.utils.data import DataLoader
 from drmodel import DeepDRModule, TrainEvalDataset
-
+from save_info import Util
+import os
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
@@ -19,7 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('--load_all', default=None, help='load all weights')
     parser.add_argument('--load_maskrcnn', default=None, help='load maskrcnn weights')
     parser.add_argument('--load_classification', default=None, help='load classification weights')
-    parser.add_argument('--test_maskrcnn', action='store_true', default=False, help="train mask_rcnn")
+    parser.add_argument('--test_classification', action='store_true', default=False, help="train mask_rcnn")
     parser.add_argument('--trainable_layers', default=5, type=int,
                         help='number of trainable (not frozen) resnet layers starting from final block.'
                              'Valid values are between 0 and 5, with 5 meaning all backbone layers are trainable.')
@@ -29,12 +31,22 @@ if __name__ == '__main__':
 
     parser.add_argument('--snap_db', default=None, help='snap_storage model, only in debug mode')
     parser.add_argument('--max_epoch', default=20, type=int, help='maximum epoch to train')
+    parser.add_argument('--file_json', default=None)
     args = parser.parse_args()
 
     model = DeepDRModule(
         snap_storage=args.snap_db,
         device=args.device,
     )
+
+    json_file = ''
+
+    if args.file_json is not None:
+        if not os.path.exists(args.file_json):
+            Util.generarJSON(filename=args.file_json)
+        json_file = args.file_json
+
+
     if args.load_all is not None:
         model.load_all(args.load_all)
 
@@ -58,6 +70,15 @@ if __name__ == '__main__':
             model.set_lr(args.lr)
             model.train_mask_rcnn_epoch(loader)
 
+    if args.test_classification:
+        loader = DataLoader(
+            ClassificationTest(split='train', root=args.data_root),
+            batch_size=1,
+            shuffle=True,
+            num_workers=1
+        )
+        model.test_classification(loader, json_file)
+
     if args.train_classification:
         loader = DataLoader(
             ClassificationTest(split='train', root=args.data_root),
@@ -67,7 +88,8 @@ if __name__ == '__main__':
         )
         for _ in range(args.max_epoch):
             model.set_lr(args.lr)
-            model.train_classification(loader, args.with_maskrcnn)
+            loss = model.train_classification(loader, args.with_maskrcnn)
+            Util.guardarLoss(filename=json_file, loss=loss)
 
     if args.dump is not None:
         model.dump_maskrcnn(f'{args.dump}_mask.pkl')

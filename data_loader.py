@@ -112,6 +112,7 @@ class ClassificationTest(Dataset):
 
     def __getitem__(self, index):
         image = self.records[index]['img_info']['filename']
+        filename = image
         image = Image.open(image)
         transform = torchvision.transforms.Compose([
             torchvision.transforms.Resize(448),
@@ -121,7 +122,7 @@ class ClassificationTest(Dataset):
             torchvision.transforms.ToTensor(),
         ])
         image = transform(image)
-        return image, self.records[index]['gt_label']
+        return image, self.records[index]['gt_label'], filename
 
     def __len__(self):
         return len(self.records)

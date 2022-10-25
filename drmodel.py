@@ -14,6 +14,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import os
+from save_info import Util
 
 logger = get_logger('main')
 
@@ -165,6 +166,27 @@ class DeepDRModule(nn.Module):
         # y_hat = self.theta_t1(t1)
         return t1
 
+    def test_classification(self, loader, json_file, with_mask_rcnn=False):
+        self.features.eval()
+        self.f1.eval()
+        if with_mask_rcnn:
+            self.maskrcnn.eval()
+        process_bar = tqdm(enumerate(loader), total=len(loader))
+        for batch_cnt, batch in process_bar:
+            image, label, fn = batch
+            label = label.squeeze()
+            image = image.to(self.device)
+            label = label.to(self.device)
+            pred = self.forward_classification(image, with_mask_rcnn=with_mask_rcnn)
+            str_fn = str(fn[0])
+            int_label = int(label)
+            int_pred = int(torch.argmax(pred, 1))
+            Util.guardarPrediction(filename=json_file,datas={
+                'filename' : str_fn,
+                'label' : int_label,
+                'pred' : int_pred
+                })
+
     def train_classification(self, loader, with_mask_rcnn=False):
         self.features.train()
         self.f1.train()
@@ -178,8 +200,9 @@ class DeepDRModule(nn.Module):
         if with_mask_rcnn:
             self.maskrcnn.train()
         process_bar = tqdm(enumerate(loader), total=len(loader))
+        loss_total = 0.0
         for batch_cnt, batch in process_bar:
-            image, label = batch
+            image, label, fn = batch
             label = label.squeeze()
             image = image.to(self.device)
             label = label.to(self.device)
@@ -187,11 +210,13 @@ class DeepDRModule(nn.Module):
             pred = self.forward_classification(image, with_mask_rcnn=with_mask_rcnn)
             print(torch.argmax(pred, 1))
             loss = F.cross_entropy(pred, label)
+            loss_total += float(loss)
             loss.backward()
             optimizer.step()
             process_bar.set_description_str(f'loss: {float(loss):.3f}', True)
         # exp_lr_scheduler.step(epoch)
         self.snap_shot()
+        return loss_total / len(loader)
 
     def dump_maskrcnn(self, path):
         if os.path.split(path)[0] != '':
