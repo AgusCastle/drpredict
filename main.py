@@ -94,12 +94,12 @@ if __name__ == '__main__':
             shuffle=True,
             num_workers=8
         )
-        for i in range(args.max_epoch):
+        for _ in range(args.max_epoch):
             model.set_lr(args.lr)
             loss = model.train_classification(loader, args.with_maskrcnn)
             Util.guardarLoss(filename=json_file, loss=loss)
 
-            model.dump_classification(f'last_{i}_{args.dump}_classification.pkl')
+            model.dump_classification(f'{args.dump}_last_classification.pkl')
 
 
     if args.dump is not None:
