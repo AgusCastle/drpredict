@@ -32,6 +32,8 @@ if __name__ == '__main__':
     parser.add_argument('--snap_db', default=None, help='snap_storage model, only in debug mode')
     parser.add_argument('--max_epoch', default=20, type=int, help='maximum epoch to train')
     parser.add_argument('--file_json', default=None)
+    parser.add_argument('--clean_loss', action='store_true', default=False)
+    parser.add_argument('--clean_preds', action='store_true', default=False)
     args = parser.parse_args()
 
     model = DeepDRModule(
@@ -41,11 +43,17 @@ if __name__ == '__main__':
 
     json_file = ''
 
+
     if args.file_json is not None:
         if not os.path.exists(args.file_json):
             Util.generarJSON(filename=args.file_json)
         json_file = args.file_json
 
+    if args.clean_loss:
+        Util.clean_loss(json_file)
+    
+    if args.clean_preds:
+        Util.clean_preds(json_file)
 
     if args.load_all is not None:
         model.load_all(args.load_all)
@@ -63,7 +71,7 @@ if __name__ == '__main__':
         loader = DataLoader(
             TrainEvalDataset(
                 LesionSegMask(split='train', root=args.data_root)),
-            batch_size= 1,
+            batch_size= 16,
             shuffle=False,
             num_workers=16)
         for _ in range(args.max_epoch):
@@ -82,14 +90,17 @@ if __name__ == '__main__':
     if args.train_classification:
         loader = DataLoader(
             ClassificationTest(split='train', root=args.data_root),
-            batch_size=32,
+            batch_size=16,
             shuffle=True,
-            num_workers=16
+            num_workers=8
         )
-        for _ in range(args.max_epoch):
+        for i in range(args.max_epoch):
             model.set_lr(args.lr)
             loss = model.train_classification(loader, args.with_maskrcnn)
             Util.guardarLoss(filename=json_file, loss=loss)
+
+            model.dump_classification(f'last_{i}_{args.dump}_classification.pkl')
+
 
     if args.dump is not None:
         model.dump_maskrcnn(f'{args.dump}_mask.pkl')

@@ -5,6 +5,24 @@ class Util():
     def __init__():
         super()
     
+    def clean_loss(filename):
+        with open(filename, 'r') as file:
+            data = json.load(file)
+
+        data['loss'].clear()
+
+        with open(filename, 'w') as file:
+            json.dump(data, file)
+    
+    def clean_preds(filename):
+        with open(filename, 'r') as file:
+            data = json.load(file)
+
+        data['predictions'].clear()
+
+        with open(filename, 'w') as file:
+            json.dump(data, file)
+
     def generarJSON( filename):
 
         data = {
